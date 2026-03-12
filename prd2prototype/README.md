@@ -1,41 +1,32 @@
-# PRD2Prototype Scaffold
+# PRD2Prototype (Local Desktop MVP)
 
-This repository contains the initial desktop scaffold for **PRD2Prototype** built with:
+PRD2Prototype converts product requirement text (Markdown or plain text) into a structured document model and then generates a visual prototype layout you can inspect and export.
 
-- Electron
-- Vue 3
-- TypeScript
-- Vite
-- Element Plus
-- Vue Router
+This repository is intended as a **handoff-ready local MVP**:
+- ingest PRD text (upload, paste, bundled example),
+- parse and normalize content into pages/modules/components/interactions,
+- render prototype pages in HTML or SVG preview mode,
+- export prototype artifacts to local files.
 
-## Project Structure
+## Local-only security assumptions
 
-```text
-prd2prototype/
-├── electron/
-│   ├── main.ts
-│   └── preload.ts
-├── src/
-│   ├── main.ts
-│   ├── App.vue
-│   ├── router/index.ts
-│   ├── pages/
-│   │   ├── HomePage.vue
-│   │   ├── ParserPage.vue
-│   │   └── PrototypePage.vue
-│   ├── components/
-│   │   └── layout/
-│   │       ├── AppShell.vue
-│   │       └── AppHeader.vue
-│   ├── styles/global.css
-│   └── stores/appStore.ts
-├── public/example-prd.md
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── README.md
-```
+This app is designed for local use and does **not** require a backend service.
+
+- PRD input is processed in the renderer process with local parsing modules.
+- The UI explicitly communicates local-only processing.
+- No authentication or multi-tenant data model is implemented.
+- No automatic cloud upload is built into this MVP.
+- Optional Ollama support is local-first and targets `http://localhost:11434` by default.
+
+> If you enable optional Ollama enhancement, prompts are sent to your local Ollama instance only (unless you reconfigure its endpoint).
+
+## Stack
+
+- **Desktop shell:** Electron
+- **Frontend:** Vue 3 + Vue Router + Element Plus
+- **Language/tooling:** TypeScript + Vite + vue-tsc
+- **State:** simple reactive store (`src/stores/appStore.ts`)
+- **Pipeline modules:** parser, classifiers, layout engine, renderer/export utilities
 
 ## Install
 
@@ -44,20 +35,92 @@ cd prd2prototype
 npm install
 ```
 
-## Run in development (Electron + Vite)
+## Run
+
+### Standard desktop development run
 
 ```bash
 npm run dev
 ```
 
-## Run web-only preview mode
+This starts the Vite + Electron development workflow configured by `vite-plugin-electron`.
+
+### Web-only run (useful in constrained environments)
 
 ```bash
 npm run dev:web
 ```
+
+> Note: depending on environment packages, Electron binary launch can fail even when web mode works (for example missing native Linux libs in minimal containers).
 
 ## Build
 
 ```bash
 npm run build
 ```
+
+This runs:
+1. type-check (`vue-tsc --noEmit`)
+2. frontend production build (`vite build`)
+3. electron main/preload build via the configured Vite Electron plugin
+
+## Optional Ollama usage
+
+The parser pipeline includes an optional AI enhancement path (`runParsingPipelineWithOptionalAi`) that can consume local Ollama suggestions for ambiguous structure/type hints.
+
+- Default endpoint: `http://localhost:11434`
+- Default model: `llama3.1:8b`
+- AI enhancement is optional and non-blocking; failures fall back to rule-based parsing.
+
+Current UI flow uses the deterministic parser pipeline by default. Ollama integration is available at the module/API layer and can be enabled when wiring an AI toggle in product UX.
+
+## Export capabilities
+
+From the Prototype page, the Export dialog can generate local downloads based on:
+- **format** (HTML or SVG output paths handled by renderer modules),
+- **scope** (selected page or all pages depending on dialog choice),
+- **label/style toggles** passed into the export renderer.
+
+Exports are generated fully on the client side and downloaded through browser/Electron-compatible download logic.
+
+## Example flow (end-to-end)
+
+1. Start the app (`npm run dev` or `npm run dev:web`).
+2. Open **Home** → **Example** tab → click **Load example file**.
+3. Go to **Parser** and verify parsed structure/JSON appears.
+4. Go to **Prototype** and verify pages/canvas render.
+5. Click **Export** and confirm export dialog opens, then export locally.
+
+Bundled sample PRD: `public/example-prd.md`.
+
+## Project structure summary
+
+```text
+prd2prototype/
+├── electron/                  # Electron main & preload
+├── public/
+│   └── example-prd.md         # Bundled quick-start sample input
+├── src/
+│   ├── ai/                    # Optional Ollama client + AI enhancement hooks
+│   ├── parser/                # Preprocess + parsing strategies + normalization pipeline
+│   ├── classifier/            # Rule-based type classifiers
+│   ├── layout/                # Layout/model generation engine
+│   ├── renderer/              # HTML/SVG export rendering + download helpers
+│   ├── components/            # Reusable Vue components (home/parser/prototype/layout)
+│   ├── pages/                 # Route-level pages
+│   ├── router/                # App routes
+│   ├── stores/                # Shared reactive app state
+│   ├── constants/             # Dimension and keyword constants
+│   ├── types/                 # Domain and pipeline TypeScript types
+│   └── utils/                 # Generic utilities
+├── vite.config.ts
+├── tsconfig.json
+└── package.json
+```
+
+## Verification checklist
+
+- `npm run build` passes type-check + build.
+- Example PRD can be loaded from the Home page.
+- Parser and Prototype pages render from the same source state.
+- Export dialog opens and local export works.
