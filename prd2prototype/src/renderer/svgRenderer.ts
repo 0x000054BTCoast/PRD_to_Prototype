@@ -4,6 +4,7 @@ export interface SvgRenderOptions {
   title?: string;
   showLabels?: boolean;
   includeMetadata?: boolean;
+  inlineStyles?: boolean;
 }
 
 const DEFAULT_PAGE_WIDTH = 1440;
@@ -58,26 +59,37 @@ function toRectClass(block: RenderBlock): string {
   return ['wireframe-block', `kind-${block.kind}`, ...block.classes].join(' ');
 }
 
-function renderLabel(block: RenderBlock): string {
+function renderLabel(block: RenderBlock, inlineStyles: boolean): string {
   const label = escapeXml(resolveLabel(block));
 
-  return `<text class="wireframe-label" x="${block.frame.x + LABEL_X_OFFSET}" y="${block.frame.y + LABEL_Y_OFFSET}">${label}</text>`;
+  const className = inlineStyles ? '' : ' class="wireframe-label"';
+  const style = inlineStyles
+    ? ' style="fill:#334155;font-size:12px;font-family:Inter, \"Segoe UI\", Roboto, Arial, sans-serif"'
+    : '';
+
+  return `<text${className}${style} x="${block.frame.x + LABEL_X_OFFSET}" y="${block.frame.y + LABEL_Y_OFFSET}">${label}</text>`;
 }
 
-function renderBlock(block: RenderBlock, showLabels: boolean): string {
-  const children = block.children.map((child) => renderBlock(child, showLabels)).join('');
-  const label = showLabels ? renderLabel(block) : '';
+function renderBlock(block: RenderBlock, showLabels: boolean, inlineStyles: boolean): string {
+  const children = block.children.map((child) => renderBlock(child, showLabels, inlineStyles)).join('');
+  const label = showLabels ? renderLabel(block, inlineStyles) : '';
+
+  const groupClass = inlineStyles ? '' : ` class="wireframe-group kind-${block.kind}"`;
+  const rectClass = inlineStyles ? '' : ` class="${escapeXml(toRectClass(block))}"`;
+  const rectStyle = inlineStyles
+    ? ` style="fill:${block.kind === 'component' ? '#fff7ed' : '#eff6ff'};stroke:${block.kind === 'component' ? '#fdba74' : '#bfdbfe'};stroke-width:1;${block.kind === 'component' ? 'stroke-dasharray:4 3;' : ''}"`
+    : '';
 
   return [
-    `<g class="wireframe-group kind-${block.kind}" data-block-id="${escapeXml(block.id)}">`,
-    `<rect class="${escapeXml(toRectClass(block))}" x="${block.frame.x}" y="${block.frame.y}" width="${block.frame.width}" height="${block.frame.height}" rx="8" ry="8" />`,
+    `<g${groupClass} data-block-id="${escapeXml(block.id)}">`,
+    `<rect${rectClass}${rectStyle} x="${block.frame.x}" y="${block.frame.y}" width="${block.frame.width}" height="${block.frame.height}" rx="8" ry="8" />`,
     label,
     children,
     '</g>',
   ].join('');
 }
 
-function renderMetadata(renderPage: RenderPage): string {
+function renderMetadata(renderPage: RenderPage, inlineStyles: boolean): string {
   const metadataEntries = Object.entries(renderPage.page.metadata ?? {});
 
   if (metadataEntries.length === 0) {
@@ -91,13 +103,21 @@ function renderMetadata(renderPage: RenderPage): string {
   const lines = metadataEntries.map(([key, value], index) => {
     const content = typeof value === 'string' ? value : JSON.stringify(value);
     const y = startY + index * lineHeight;
-    return `<text class="wireframe-meta" x="${startX}" y="${y}">${escapeXml(`${key}: ${content}`)}</text>`;
+    const className = inlineStyles ? '' : ' class="wireframe-meta"';
+    const style = inlineStyles
+      ? ' style="fill:#64748b;font-size:12px;font-family:Inter, \"Segoe UI\", Roboto, Arial, sans-serif"'
+      : '';
+    return `<text${className}${style} x="${startX}" y="${y}">${escapeXml(`${key}: ${content}`)}</text>`;
   });
 
   return `<g id="metadata">${lines.join('')}</g>`;
 }
 
-function renderDefs(): string {
+function renderDefs(inlineStyles: boolean): string {
+  if (inlineStyles) {
+    return '';
+  }
+
   return `<defs>
     <style>
       .wireframe-page { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1; }
@@ -121,20 +141,24 @@ export function renderPageToSvg(renderPage: RenderPage, options: SvgRenderOption
   const width = resolvePageWidth(renderPage);
   const height = resolvePageHeight(renderPage);
   const showLabels = options.showLabels ?? true;
+  const inlineStyles = options.inlineStyles ?? false;
   const title = options.title ?? `${renderPage.page.name} Prototype`;
-  const blocks = renderPage.blocks.map((block) => renderBlock(block, showLabels)).join('');
+  const blocks = renderPage.blocks.map((block) => renderBlock(block, showLabels, inlineStyles)).join('');
+  const svgStyle = inlineStyles ? ' style="background:#fff"' : '';
+  const pageRectClass = inlineStyles ? '' : ' class="wireframe-page"';
+  const pageRectStyle = inlineStyles ? ' style="fill:#ffffff;stroke:#cbd5e1;stroke-width:1"' : '';
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc"${svgStyle}>`,
     `<title id="title">${escapeXml(title)}</title>`,
     `<desc id="desc">Wireframe for ${escapeXml(renderPage.page.name)} (${escapeXml(renderPage.page.type)})</desc>`,
-    renderDefs(),
-    `<rect class="wireframe-page" x="0.5" y="0.5" width="${Math.max(0, width - 1)}" height="${Math.max(0, height - 1)}" rx="12" ry="12" />`,
+    renderDefs(inlineStyles),
+    `<rect${pageRectClass}${pageRectStyle} x="0.5" y="0.5" width="${Math.max(0, width - 1)}" height="${Math.max(0, height - 1)}" rx="12" ry="12" />`,
     '<g id="blocks">',
     blocks,
     '</g>',
-    options.includeMetadata ? renderMetadata(renderPage) : '',
+    options.includeMetadata ? renderMetadata(renderPage, inlineStyles) : '',
     '</svg>',
   ].join('');
 }

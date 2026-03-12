@@ -29,6 +29,7 @@
         @change="$emit('update:previewMode', $event as 'html' | 'svg')"
       />
 
+      <el-button @click="$emit('open-export')">Export</el-button>
       <el-button type="primary" @click="$emit('regenerate')">Regenerate layout</el-button>
     </div>
   </el-card>
@@ -62,6 +63,7 @@ defineEmits<{
   (event: 'update:fitWidth', value: boolean): void;
   (event: 'update:showLabels', value: boolean): void;
   (event: 'update:previewMode', value: 'html' | 'svg'): void;
+  (event: 'open-export'): void;
 }>();
 </script>
 
