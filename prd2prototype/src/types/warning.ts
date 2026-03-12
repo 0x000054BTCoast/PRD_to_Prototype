@@ -5,6 +5,7 @@ export const WARNING_SEVERITIES = ['info', 'warning', 'error'] as const;
 export type WarningSeverity = (typeof WARNING_SEVERITIES)[number];
 
 export const PARSE_WARNING_CODES = [
+  'parse-failure',
   'missing-section',
   'unsupported-page-type',
   'unsupported-module-type',

@@ -30,6 +30,27 @@ function parseNormalizedText(normalizedText: string): ParsePipelineStages {
   };
 }
 
+function createParseFailureDocument(sourceText: string, error: unknown): ParsedDocument {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown parser error';
+
+  return {
+    source: sourceText,
+    pages: [],
+    interactions: [],
+    warnings: [
+      {
+        code: 'parse-failure',
+        severity: 'error',
+        message: 'The parser failed on malformed content. Showing an empty fallback structure instead.',
+        suggestion: `Fix malformed sections and parse again. Technical detail: ${errorMessage}`,
+      },
+    ],
+    metadata: {
+      parseFailed: true,
+    },
+  };
+}
+
 export function runParsingPipeline(sourceText: string): ParsePipelineResult {
   const trimmed = sourceText.trim();
 
@@ -41,15 +62,25 @@ export function runParsingPipeline(sourceText: string): ParsePipelineResult {
     };
   }
 
-  const preprocess = preprocessPrdText(sourceText);
-  const stages = parseNormalizedText(preprocess.normalizedText);
-  const document = normalizeStructure([stages.explicit, stages.heading, stages.indent]);
+  try {
+    const preprocess = preprocessPrdText(sourceText);
+    const stages = parseNormalizedText(preprocess.normalizedText);
+    const document = normalizeStructure([stages.explicit, stages.heading, stages.indent]);
 
-  return {
-    preprocess,
-    stages,
-    document,
-  };
+    return {
+      preprocess,
+      stages,
+      document,
+    };
+  } catch (error) {
+    console.error('Parsing pipeline failed, returning safe fallback.', error);
+
+    return {
+      preprocess: null,
+      stages: null,
+      document: createParseFailureDocument(sourceText, error),
+    };
+  }
 }
 
 export async function runParsingPipelineWithOptionalAi(

@@ -10,7 +10,7 @@
     </template>
 
     <el-alert
-      :title="warnings.length ? 'Parser generated warnings and fallback notices.' : 'No parser warnings.'"
+      :title="warnings.length ? 'Warnings are visible but non-blocking. You can continue generating layouts.' : 'No parser warnings.'"
       :type="warnings.length ? 'warning' : 'success'"
       :closable="false"
       show-icon
@@ -43,6 +43,11 @@
         </el-table>
       </el-collapse-item>
     </el-collapse>
+
+    <el-empty
+      v-if="!warnings.length && !keywordMatches.length"
+      description="No diagnostics yet. Load and parse a PRD to inspect parser behavior."
+    />
   </el-card>
 </template>
 

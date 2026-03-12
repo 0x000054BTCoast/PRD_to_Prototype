@@ -30,6 +30,7 @@
       />
 
       <el-button @click="$emit('open-export')">Export</el-button>
+      <el-button @click="$emit('reset-layout')">Reset layout</el-button>
       <el-button type="primary" @click="$emit('regenerate')">Regenerate layout</el-button>
     </div>
   </el-card>
@@ -60,6 +61,7 @@ defineEmits<{
   (event: 'zoom-in'): void;
   (event: 'zoom-out'): void;
   (event: 'regenerate'): void;
+  (event: 'reset-layout'): void;
   (event: 'update:fitWidth', value: boolean): void;
   (event: 'update:showLabels', value: boolean): void;
   (event: 'update:previewMode', value: 'html' | 'svg'): void;
