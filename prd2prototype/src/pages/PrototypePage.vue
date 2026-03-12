@@ -5,6 +5,15 @@
         <div class="prototype-page__section-title">Pages</div>
       </template>
 
+      <el-alert
+        v-if="warnings.length"
+        title="Warnings are non-blocking. You can still generate and export prototype layouts."
+        type="warning"
+        :closable="false"
+        show-icon
+        class="prototype-page__warning-banner"
+      />
+
       <el-tree
         v-if="pageTreeNodes.length"
         node-key="id"
@@ -16,7 +25,7 @@
         highlight-current
         @node-click="onPageNodeClick"
       />
-      <el-empty v-else description="No pages parsed yet." />
+      <el-empty v-else description="No pages parsed yet. Parse a PRD or load the example file." />
     </el-card>
 
     <section class="prototype-page__canvas-area">
@@ -31,6 +40,7 @@
         @update:show-labels="showLabels = $event"
         @update:preview-mode="previewMode = $event"
         @regenerate="regenerateLayout"
+        @reset-layout="resetLayout"
         @open-export="exportDialogVisible = true"
       />
 
@@ -43,22 +53,34 @@
       />
     </section>
 
-    <PropertyPanel
-      :layout-mode="layoutMode"
-      :preview-mode="previewMode"
-      :selected-page="selectedPage"
-      @update:layout-mode="layoutMode = $event"
-      @update:preview-mode="previewMode = $event"
-      @regenerate="regenerateLayout"
-    />
+    <div class="prototype-page__right-column">
+      <PropertyPanel
+        :layout-mode="layoutMode"
+        :preview-mode="previewMode"
+        :selected-page="selectedPage"
+        @update:layout-mode="layoutMode = $event"
+        @update:preview-mode="previewMode = $event"
+        @regenerate="regenerateLayout"
+      />
+
+      <el-card shadow="never" class="prototype-page__actions-card">
+        <template #header>
+          <span>Quick Actions</span>
+        </template>
+        <div class="prototype-page__quick-actions">
+          <el-button @click="reparse">Parse again</el-button>
+          <el-button @click="regenerateLayout" type="primary" plain>Regenerate layout</el-button>
+          <el-button @click="resetLayout">Reset layout</el-button>
+        </div>
+      </el-card>
+    </div>
   </section>
 
-    <ExportDialog
-      v-model="exportDialogVisible"
-      :disabled="!renderPages.length"
-      @confirm="onExportConfirm"
-    />
-
+  <ExportDialog
+    v-model="exportDialogVisible"
+    :disabled="!renderPages.length"
+    @confirm="onExportConfirm"
+  />
 </template>
 
 <script setup lang="ts">
@@ -91,11 +113,16 @@ const showLabels = ref(true);
 const previewMode = ref<'html' | 'svg'>('html');
 const layoutMode = ref<'compact' | 'balanced' | 'comfortable'>('balanced');
 const regenerationCount = ref(0);
+const parseVersion = ref(0);
 const selectedPageId = ref<string | null>(null);
 const exportDialogVisible = ref(false);
 
-const pipelineResult = computed(() => runParsingPipeline(store.sourceText));
+const pipelineResult = computed(() => {
+  parseVersion.value;
+  return runParsingPipeline(store.sourceText);
+});
 const parsedDocument = computed(() => pipelineResult.value.document);
+const warnings = computed(() => parsedDocument.value?.warnings ?? []);
 
 const pageTreeNodes = computed<PageTreeNode[]>(() => {
   const pages = parsedDocument.value?.pages ?? [];
@@ -156,6 +183,22 @@ function zoomOut(): void {
 
 function regenerateLayout(): void {
   regenerationCount.value += 1;
+  ElMessage.success('Layout regenerated.');
+}
+
+function reparse(): void {
+  parseVersion.value += 1;
+  ElMessage.success('Parsed again successfully.');
+}
+
+function resetLayout(): void {
+  zoom.value = 1;
+  fitWidth.value = true;
+  showLabels.value = true;
+  previewMode.value = 'html';
+  layoutMode.value = 'balanced';
+  regenerationCount.value += 1;
+  ElMessage.success('Layout controls reset to defaults.');
 }
 
 function roundZoom(value: number): number {
@@ -224,9 +267,19 @@ function getLayoutDimensions(mode: 'compact' | 'balanced' | 'comfortable'): Layo
   min-height: 620px;
 }
 
+.prototype-page__sidebar,
+.prototype-page__canvas-area,
+.prototype-page__right-column {
+  min-height: 0;
+}
+
 .prototype-page__sidebar {
   height: 100%;
   overflow: auto;
+}
+
+.prototype-page__warning-banner {
+  margin-bottom: 10px;
 }
 
 .prototype-page__canvas-area {
@@ -238,6 +291,24 @@ function getLayoutDimensions(mode: 'compact' | 'balanced' | 'comfortable'): Layo
 
 .prototype-page__canvas-area :deep(.prototype-canvas__viewport) {
   flex: 1;
+}
+
+.prototype-page__right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow: auto;
+}
+
+.prototype-page__actions-card {
+  flex: 0 0 auto;
+}
+
+.prototype-page__quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .prototype-page__section-title {
