@@ -5,6 +5,13 @@ export const RENDER_BLOCK_KINDS = ['module', 'component'] as const;
 
 export type RenderBlockKind = (typeof RENDER_BLOCK_KINDS)[number];
 
+export interface RenderFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface RenderBlock {
   id: string;
   kind: RenderBlockKind;
@@ -12,6 +19,7 @@ export interface RenderBlock {
   moduleId?: string;
   componentId?: string;
   classes: string[];
+  frame: RenderFrame;
   children: RenderBlock[];
   module?: ParsedModule;
   component?: ParsedComponent;
