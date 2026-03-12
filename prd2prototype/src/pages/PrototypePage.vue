@@ -31,6 +31,7 @@
         @update:show-labels="showLabels = $event"
         @update:preview-mode="previewMode = $event"
         @regenerate="regenerateLayout"
+        @open-export="exportDialogVisible = true"
       />
 
       <PrototypeCanvas
@@ -51,18 +52,29 @@
       @regenerate="regenerateLayout"
     />
   </section>
+
+    <ExportDialog
+      v-model="exportDialogVisible"
+      :disabled="!renderPages.length"
+      @confirm="onExportConfirm"
+    />
+
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { ElMessage } from 'element-plus';
 import PrototypeCanvas from '../components/prototype/PrototypeCanvas.vue';
 import PrototypeToolbar from '../components/prototype/PrototypeToolbar.vue';
 import PropertyPanel from '../components/prototype/PropertyPanel.vue';
+import ExportDialog from '../components/prototype/ExportDialog.vue';
 import { appStore as store } from '../stores/appStore';
 import { runParsingPipeline } from '../parser/pipeline';
 import { generateRenderPages } from '../layout/layoutEngine';
 import { DEFAULT_LAYOUT_DIMENSIONS } from '../constants/dimensions';
 import type { LayoutDimensions } from '../constants/dimensions';
+import { exportPrototypeLocally } from '../renderer/download';
+import type { ExportFormat, ExportScope } from '../renderer/download';
 
 interface PageTreeNode {
   id: string;
@@ -80,6 +92,7 @@ const previewMode = ref<'html' | 'svg'>('html');
 const layoutMode = ref<'compact' | 'balanced' | 'comfortable'>('balanced');
 const regenerationCount = ref(0);
 const selectedPageId = ref<string | null>(null);
+const exportDialogVisible = ref(false);
 
 const pipelineResult = computed(() => runParsingPipeline(store.sourceText));
 const parsedDocument = computed(() => pipelineResult.value.document);
@@ -151,6 +164,34 @@ function roundZoom(value: number): number {
 
 function onPageNodeClick(node: PageTreeNode): void {
   selectedPageId.value = node.id;
+}
+
+function onExportConfirm(payload: {
+  format: ExportFormat;
+  scope: ExportScope;
+  inlineStyles: boolean;
+  showLabels: boolean;
+}): void {
+  const document = parsedDocument.value;
+
+  if (!document || renderPages.value.length === 0) {
+    ElMessage.warning('Nothing to export yet. Parse a PRD first.');
+    return;
+  }
+
+  const fileName = exportPrototypeLocally(
+    {
+      document,
+      renderPages: renderPages.value,
+    },
+    {
+      ...payload,
+      selectedPageId: selectedPage.value?.id ?? null,
+      projectName: store.projectName,
+    },
+  );
+
+  ElMessage.success(`Downloaded ${fileName}`);
 }
 
 function getLayoutDimensions(mode: 'compact' | 'balanced' | 'comfortable'): LayoutDimensions {

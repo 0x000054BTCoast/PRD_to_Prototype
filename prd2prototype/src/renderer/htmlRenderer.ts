@@ -4,6 +4,7 @@ export interface HtmlRenderOptions {
   title?: string;
   showLabels?: boolean;
   includeMetadata?: boolean;
+  inlineStyles?: boolean;
 }
 
 const DEFAULT_PAGE_WIDTH = 1440;
@@ -48,13 +49,21 @@ function toStyle(frame: RenderBlock['frame']): string {
   ].join(';');
 }
 
-function renderBlock(block: RenderBlock, showLabels: boolean): string {
+function renderBlock(block: RenderBlock, showLabels: boolean, inlineStyles: boolean): string {
   const label = escapeHtml(resolveLabel(block));
-  const children = block.children.map((child) => renderBlock(child, showLabels)).join('');
+  const children = block.children.map((child) => renderBlock(child, showLabels, inlineStyles)).join('');
+
+  const className = inlineStyles ? '' : ` class="wireframe-block kind-${block.kind}"`;
+  const inlineSurfaceStyles = inlineStyles
+    ? `;position:absolute;border-radius:10px;border:1px solid ${block.kind === 'component' ? '#fdba74' : '#dbeafe'};background:${block.kind === 'component' ? '#fff7ed' : '#eff6ff'};padding-top:2px`
+    : '';
+  const labelStyle = inlineStyles
+    ? ' style="display:inline-flex;margin:8px;padding:2px 8px;border-radius:999px;background:rgba(15, 23, 42, 0.08);font-size:12px;line-height:18px;color:#334155"'
+    : ' class="wireframe-label"';
 
   return [
-    `<article class="wireframe-block kind-${block.kind}" data-block-id="${escapeHtml(block.id)}" style="${toStyle(block.frame)}">`,
-    showLabels ? `<header class="wireframe-label">${label}</header>` : '',
+    `<article${className} data-block-id="${escapeHtml(block.id)}" style="${toStyle(block.frame)}${inlineSurfaceStyles}">`,
+    showLabels ? `<header${labelStyle}>${label}</header>` : '',
     children,
     '</article>',
   ].join('');
@@ -73,7 +82,7 @@ function resolvePageHeight(renderPage: RenderPage): number {
   return Math.max(maxModuleBottom + PAGE_PADDING, DEFAULT_PAGE_HEIGHT);
 }
 
-function renderMetadata(renderPage: RenderPage): string {
+function renderMetadata(renderPage: RenderPage, inlineStyles: boolean): string {
   const metadataEntries = Object.entries(renderPage.page.metadata ?? {});
 
   if (metadataEntries.length === 0) {
@@ -86,6 +95,10 @@ function renderMetadata(renderPage: RenderPage): string {
       return `<li><strong>${escapeHtml(key)}:</strong> ${escapeHtml(content)}</li>`;
     })
     .join('');
+
+  if (inlineStyles) {
+    return `<section style="margin-top:16px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;width:fit-content;max-width:100%;font-size:13px"><h2 style="margin:0 0 8px;font-size:13px;color:#475569;text-transform:uppercase;letter-spacing:0.04em">Page metadata</h2><ul style="margin:0;padding-left:16px">${rows}</ul></section>`;
+  }
 
   return `<section class="wireframe-meta"><h2>Page metadata</h2><ul>${rows}</ul></section>`;
 }
@@ -169,11 +182,26 @@ function renderStyles(): string {
 
 export function renderPageToHtml(renderPage: RenderPage, options: HtmlRenderOptions = {}): string {
   const showLabels = options.showLabels ?? true;
+  const inlineStyles = options.inlineStyles ?? false;
   const pageWidth = resolvePageWidth(renderPage);
   const pageHeight = resolvePageHeight(renderPage);
   const title = options.title ?? `${renderPage.page.name} Prototype`;
 
-  const blocks = renderPage.blocks.map((block) => renderBlock(block, showLabels)).join('');
+  const blocks = renderPage.blocks
+    .map((block) => renderBlock(block, showLabels, inlineStyles))
+    .join('');
+  const bodyStyle = inlineStyles
+    ? ' style="margin:0;padding:24px;font-family:Inter, \"Segoe UI\", Roboto, Arial, sans-serif;background:#f8fafc;color:#0f172a"'
+    : '';
+  const titleStyle = inlineStyles
+    ? ' style="margin:0 0 6px;font-size:20px;font-weight:600"'
+    : ' class="wireframe-page-title"';
+  const subtitleStyle = inlineStyles
+    ? ' style="margin:0 0 16px;font-size:13px;color:#64748b"'
+    : ' class="wireframe-page-subtitle"';
+  const surfaceStyle = inlineStyles
+    ? ` style="position:relative;width:${pageWidth}px;min-height:${pageHeight}px;border:1px solid #cbd5e1;border-radius:12px;background:#ffffff;box-shadow:0 12px 32px rgba(15, 23, 42, 0.08);overflow:hidden"`
+    : ` class="wireframe-surface" style="--surface-width:${pageWidth}px;--surface-height:${pageHeight}px"`;
 
   return [
     '<!doctype html>',
@@ -182,13 +210,13 @@ export function renderPageToHtml(renderPage: RenderPage, options: HtmlRenderOpti
     '<meta charset="UTF-8" />',
     '<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
     `<title>${escapeHtml(title)}</title>`,
-    renderStyles(),
+    inlineStyles ? '' : renderStyles(),
     '</head>',
-    '<body>',
-    `<h1 class="wireframe-page-title">${escapeHtml(renderPage.page.name)}</h1>`,
-    `<p class="wireframe-page-subtitle">Type: ${escapeHtml(renderPage.page.type)}${renderPage.page.route ? ` · Route: ${escapeHtml(renderPage.page.route)}` : ''}</p>`,
-    `<main class="wireframe-surface" style="--surface-width:${pageWidth}px;--surface-height:${pageHeight}px">${blocks}</main>`,
-    options.includeMetadata ? renderMetadata(renderPage) : '',
+    `<body${bodyStyle}>`,
+    `<h1${titleStyle}>${escapeHtml(renderPage.page.name)}</h1>`,
+    `<p${subtitleStyle}>Type: ${escapeHtml(renderPage.page.type)}${renderPage.page.route ? ` · Route: ${escapeHtml(renderPage.page.route)}` : ''}</p>`,
+    `<main${surfaceStyle}>${blocks}</main>`,
+    options.includeMetadata ? renderMetadata(renderPage, inlineStyles) : '',
     '</body>',
     '</html>',
   ].join('');
