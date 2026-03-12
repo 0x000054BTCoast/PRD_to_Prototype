@@ -13,7 +13,7 @@ const createWindow = async (): Promise<void> => {
     minHeight: 640,
     show: false,
     webPreferences: {
-      preload: join(__dirname, 'preload.mjs'),
+      preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
