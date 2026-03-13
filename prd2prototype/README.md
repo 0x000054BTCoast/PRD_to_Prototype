@@ -16,9 +16,9 @@ This app is designed for local use and does **not** require a backend service.
 - The UI explicitly communicates local-only processing.
 - No authentication or multi-tenant data model is implemented.
 - No automatic cloud upload is built into this MVP.
-- Optional Ollama support is local-first and targets `http://localhost:11434` by default.
+- Optional DeepSeek parsing can be enabled via API key to improve PRD understanding quality.
 
-> If you enable optional Ollama enhancement, prompts are sent to your local Ollama instance only (unless you reconfigure its endpoint).
+> If you enable DeepSeek parsing, PRD prompts are sent to DeepSeek API. Leave it disabled for local rule-based parsing only.
 
 ## Stack
 
@@ -64,15 +64,25 @@ This runs:
 2. frontend production build (`vite build`)
 3. electron main/preload build via the configured Vite Electron plugin
 
-## Optional Ollama usage
+## Optional DeepSeek parser
 
-The parser pipeline includes an optional AI enhancement path (`runParsingPipelineWithOptionalAi`) that can consume local Ollama suggestions for ambiguous structure/type hints.
 
-- Default endpoint: `http://localhost:11434`
-- Default model: `llama3.1:8b`
-- AI enhancement is optional and non-blocking; failures fall back to rule-based parsing.
+### 新手快速配置（无需改 .env）
 
-Current UI flow uses the deterministic parser pipeline by default. Ollama integration is available at the module/API layer and can be enabled when wiring an AI toggle in product UX.
+1. 打开 **Home** 页面。
+2. 在 **DeepSeek Parser 设置（推荐）** 区域打开开关。
+3. 粘贴你的 `DeepSeek API Key`（`sk-...`）并保存。
+4. 重新点击 Parse/Regenerate 即可走 DeepSeek 解析。
+
+> API Key 会保存到当前浏览器的 LocalStorage，仅本机可见。
+
+The parser pipeline now supports a preferred DeepSeek parsing path (`runParsingPipelinePreferDeepseek`) that asks DeepSeek to convert PRD text into structured JSON, then normalizes it for rendering.
+
+- Default endpoint: `https://api.deepseek.com`
+- Default model: `deepseek-chat`
+- Configure API key from Home page settings (or `VITE_DEEPSEEK_API_KEY` as fallback).
+- Set `VITE_ENABLE_DEEPSEEK_PARSER=false` to force rule-based parsing only.
+- DeepSeek parsing is non-blocking; failures fall back to the deterministic parser pipeline.
 
 ## Export capabilities
 
@@ -101,7 +111,7 @@ prd2prototype/
 ├── public/
 │   └── example-prd.md         # Bundled quick-start sample input
 ├── src/
-│   ├── ai/                    # Optional Ollama client + AI enhancement hooks
+│   ├── ai/                    # DeepSeek/Ollama clients + AI parsing/enhancement hooks
 │   ├── parser/                # Preprocess + parsing strategies + normalization pipeline
 │   ├── classifier/            # Rule-based type classifiers
 │   ├── layout/                # Layout/model generation engine

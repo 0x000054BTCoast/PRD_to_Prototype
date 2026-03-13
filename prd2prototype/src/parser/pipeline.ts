@@ -5,6 +5,7 @@ import { preprocessPrdText, type PreprocessResult } from './preprocess';
 import { normalizeStructure } from './structureNormalizer';
 import type { ParsedDocument } from '../types/parser';
 import { enhanceParserWithAi, type AiEnhancement, type AiEnhancementOptions } from '../ai/aiParser';
+import { parsePrdWithDeepseek, type DeepseekParserOptions } from '../ai/deepseekPrdParser';
 
 export interface ParsePipelineStages {
   explicit: ParsedDocument;
@@ -20,6 +21,10 @@ export interface ParsePipelineResult {
 
 export interface ParsePipelineWithAiResult extends ParsePipelineResult {
   aiEnhancement: AiEnhancement | null;
+}
+
+export interface ParsePipelineWithPreferredAiResult extends ParsePipelineResult {
+  usedAiParser: boolean;
 }
 
 function parseNormalizedText(normalizedText: string): ParsePipelineStages {
@@ -105,5 +110,42 @@ export async function runParsingPipelineWithOptionalAi(
   return {
     ...baseResult,
     aiEnhancement,
+  };
+}
+
+export async function runParsingPipelinePreferDeepseek(
+  sourceText: string,
+  deepseekOptions: DeepseekParserOptions = {},
+): Promise<ParsePipelineWithPreferredAiResult> {
+  const baseResult = runParsingPipeline(sourceText);
+
+  if (!baseResult.document) {
+    return {
+      ...baseResult,
+      usedAiParser: false,
+    };
+  }
+
+  const aiResult = await parsePrdWithDeepseek(sourceText, deepseekOptions);
+
+  if (aiResult.warnings.length > 0) {
+    baseResult.document.warnings.push(...aiResult.warnings);
+  }
+
+  if (!aiResult.document) {
+    return {
+      ...baseResult,
+      usedAiParser: false,
+    };
+  }
+
+  return {
+    preprocess: baseResult.preprocess,
+    stages: baseResult.stages,
+    document: {
+      ...aiResult.document,
+      warnings: [...aiResult.document.warnings, ...baseResult.document.warnings],
+    },
+    usedAiParser: true,
   };
 }

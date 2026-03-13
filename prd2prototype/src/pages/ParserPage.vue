@@ -6,14 +6,14 @@
           <span>PRD Source</span>
           <div class="parser-page__actions">
             <el-button size="small" @click="loadExampleFile" :loading="isLoadingExample">Example file</el-button>
-            <el-button size="small" @click="reparse">Parse again</el-button>
+            <el-button size="small" @click="reparse" :loading="isParsing">Parse again</el-button>
           </div>
         </div>
       </template>
       <PrdPreviewPanel :source-text="store.sourceText" :normalized-text="normalizedText" />
     </el-card>
 
-    <el-card shadow="never" class="parser-page__panel parser-page__panel--center">
+    <el-card shadow="never" class="parser-page__panel parser-page__panel--center" v-loading="isParsing">
       <template #header>
         <div class="parser-page__panel-header">
           <span>Parsed Output</span>
@@ -53,7 +53,7 @@
       <template #header>
         <div class="parser-page__panel-header">
           <span>Warnings & Diagnostics</span>
-          <el-button size="small" @click="reparse" :disabled="!store.sourceText.trim()">Parse again</el-button>
+          <el-button size="small" @click="reparse" :disabled="!store.sourceText.trim()" :loading="isParsing">Parse again</el-button>
         </div>
       </template>
       <ParseIssuePanel :warnings="warnings" :keyword-matches="keywordMatches" />
@@ -62,29 +62,47 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import PrdPreviewPanel from '../components/parser/PrdPreviewPanel.vue';
 import JsonViewer from '../components/parser/JsonViewer.vue';
 import StructureTree from '../components/parser/StructureTree.vue';
 import ParseIssuePanel from '../components/parser/ParseIssuePanel.vue';
 import { appStore as store } from '../stores/appStore';
-import { runParsingPipeline } from '../parser/pipeline';
+import { aiSettingsStore } from '../stores/aiSettingsStore';
+import { parsePrdDocument } from '../parser/parseOrchestrator';
+import type { ParsePipelineResult } from '../parser/pipeline';
 
 const EXAMPLE_FILE_PATH = '/example-prd.md';
 
 const activeCenterTab = ref<'structure' | 'json'>('structure');
 const parseVersion = ref(0);
 const isLoadingExample = ref(false);
+const isParsing = ref(false);
+const pipelineResult = ref<ParsePipelineResult>({ preprocess: null, stages: null, document: null });
 
-const pipelineResult = computed(() => {
-  parseVersion.value;
-  return runParsingPipeline(store.sourceText);
-});
 const parsedDocument = computed(() => pipelineResult.value.document);
 const normalizedText = computed(() => pipelineResult.value.preprocess?.normalizedText ?? '');
 const warnings = computed(() => parsedDocument.value?.warnings ?? []);
 const keywordMatches = computed(() => pipelineResult.value.preprocess?.keywordMatches ?? []);
+
+watch(
+  [() => store.sourceText, parseVersion, () => aiSettingsStore.deepseekEnabled, () => aiSettingsStore.deepseekApiKey],
+  async () => {
+    isParsing.value = true;
+    try {
+      pipelineResult.value = await parsePrdDocument(store.sourceText, {
+        deepseek: {
+          enabled: aiSettingsStore.deepseekEnabled,
+          apiKey: aiSettingsStore.deepseekApiKey,
+        },
+      });
+    } finally {
+      isParsing.value = false;
+    }
+  },
+  { immediate: true },
+);
 
 function reparse(): void {
   parseVersion.value += 1;

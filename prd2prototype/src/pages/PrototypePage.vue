@@ -1,6 +1,6 @@
 <template>
   <section class="prototype-page">
-    <el-card shadow="never" class="prototype-page__sidebar">
+    <el-card shadow="never" class="prototype-page__sidebar" v-loading="isParsing">
       <template #header>
         <div class="prototype-page__section-title">Pages</div>
       </template>
@@ -68,7 +68,7 @@
           <span>Quick Actions</span>
         </template>
         <div class="prototype-page__quick-actions">
-          <el-button @click="reparse">Parse again</el-button>
+          <el-button @click="reparse" :loading="isParsing">Parse again</el-button>
           <el-button @click="regenerateLayout" type="primary" plain>Regenerate layout</el-button>
           <el-button @click="resetLayout">Reset layout</el-button>
         </div>
@@ -91,7 +91,9 @@ import PrototypeToolbar from '../components/prototype/PrototypeToolbar.vue';
 import PropertyPanel from '../components/prototype/PropertyPanel.vue';
 import ExportDialog from '../components/prototype/ExportDialog.vue';
 import { appStore as store } from '../stores/appStore';
-import { runParsingPipeline } from '../parser/pipeline';
+import { aiSettingsStore } from '../stores/aiSettingsStore';
+import { parsePrdDocument } from '../parser/parseOrchestrator';
+import type { ParsePipelineResult } from '../parser/pipeline';
 import { generateRenderPages } from '../layout/layoutEngine';
 import { DEFAULT_LAYOUT_DIMENSIONS } from '../constants/dimensions';
 import type { LayoutDimensions } from '../constants/dimensions';
@@ -117,10 +119,27 @@ const parseVersion = ref(0);
 const selectedPageId = ref<string | null>(null);
 const exportDialogVisible = ref(false);
 
-const pipelineResult = computed(() => {
-  parseVersion.value;
-  return runParsingPipeline(store.sourceText);
-});
+const pipelineResult = ref<ParsePipelineResult>({ preprocess: null, stages: null, document: null });
+const isParsing = ref(false);
+
+watch(
+  [() => store.sourceText, parseVersion, () => aiSettingsStore.deepseekEnabled, () => aiSettingsStore.deepseekApiKey],
+  async () => {
+    isParsing.value = true;
+    try {
+      pipelineResult.value = await parsePrdDocument(store.sourceText, {
+        deepseek: {
+          enabled: aiSettingsStore.deepseekEnabled,
+          apiKey: aiSettingsStore.deepseekApiKey,
+        },
+      });
+    } finally {
+      isParsing.value = false;
+    }
+  },
+  { immediate: true },
+);
+
 const parsedDocument = computed(() => pipelineResult.value.document);
 const warnings = computed(() => parsedDocument.value?.warnings ?? []);
 

@@ -10,7 +10,7 @@
     </template>
 
     <el-alert
-      title="All documents are processed locally. No data is uploaded. No backend services are used."
+      :title="securityNotice"
       type="info"
       show-icon
       :closable="false"
@@ -53,6 +53,32 @@
       </el-tab-pane>
     </el-tabs>
 
+    <el-card shadow="never" class="ai-settings-card">
+      <template #header>
+        <span>DeepSeek Parser 设置（推荐）</span>
+      </template>
+
+      <div class="ai-settings-grid">
+        <span>启用 DeepSeek 解析</span>
+        <el-switch v-model="aiSettingsStore.deepseekEnabled" @change="onAiSettingsChanged" />
+
+        <span>DeepSeek API Key</span>
+        <el-input
+          v-model="aiSettingsStore.deepseekApiKey"
+          type="password"
+          show-password
+          clearable
+          placeholder="sk-..."
+          @change="onAiSettingsChanged"
+        />
+      </div>
+
+      <el-text size="small" type="info">
+        新手建议：直接把 API Key 粘贴到这里即可（会保存在当前浏览器 LocalStorage）。
+        如果关闭开关或 Key 为空，将自动回退到本地规则解析。
+      </el-text>
+    </el-card>
+
     <el-card v-if="store.sourceText" shadow="never" class="source-meta">
       <template #header>
         <span>Source info</span>
@@ -78,6 +104,7 @@ import { computed, ref } from 'vue';
 import type { UploadFile, UploadFiles } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { appStore as store, type PrdSourceType } from '../../stores/appStore';
+import { aiSettingsStore, persistAiSettings } from '../../stores/aiSettingsStore';
 
 const EXAMPLE_FILE_PATH = '/example-prd.md';
 const PREVIEW_CHAR_LIMIT = 1200;
@@ -90,7 +117,7 @@ const sourceTypeLabel = computed(() => {
   const sourceTypeMap: Record<Exclude<PrdSourceType, null>, string> = {
     upload: 'Local file upload',
     paste: 'Pasted text',
-    example: 'Bundled example file'
+    example: 'Bundled example file',
   };
 
   if (!store.sourceType) {
@@ -99,6 +126,12 @@ const sourceTypeLabel = computed(() => {
 
   return sourceTypeMap[store.sourceType];
 });
+
+const securityNotice = computed(() =>
+  aiSettingsStore.deepseekEnabled
+    ? '文档默认在本地处理；启用 DeepSeek 时，会将 PRD 文本发送到 DeepSeek API 进行结构化解析。'
+    : '所有文档均在本地规则引擎处理，不会上传到云端服务。',
+);
 
 const formattedFileSize = computed(() => {
   if (typeof store.sourceFileSize !== 'number') {
@@ -119,6 +152,10 @@ const previewText = computed(() => {
 
   return `${store.sourceText.slice(0, PREVIEW_CHAR_LIMIT)}\n\n... (preview truncated)`;
 });
+
+function onAiSettingsChanged(): void {
+  persistAiSettings();
+}
 
 const onExceed = () => {
   ElMessage.warning('Please upload one file at a time.');
@@ -205,6 +242,18 @@ const loadExampleFile = async () => {
 
 .action-button {
   margin-top: 12px;
+}
+
+.ai-settings-card {
+  margin-top: 8px;
+}
+
+.ai-settings-grid {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .source-meta,
