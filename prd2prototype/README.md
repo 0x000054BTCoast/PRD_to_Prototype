@@ -16,9 +16,9 @@ This app is designed for local use and does **not** require a backend service.
 - The UI explicitly communicates local-only processing.
 - No authentication or multi-tenant data model is implemented.
 - No automatic cloud upload is built into this MVP.
-- Optional Ollama support is local-first and targets `http://localhost:11434` by default.
+- Optional DeepSeek parsing can be enabled via API key to improve PRD understanding quality.
 
-> If you enable optional Ollama enhancement, prompts are sent to your local Ollama instance only (unless you reconfigure its endpoint).
+> If you enable DeepSeek parsing, PRD prompts are sent to DeepSeek API. Leave it disabled for local rule-based parsing only.
 
 ## Stack
 
@@ -64,15 +64,15 @@ This runs:
 2. frontend production build (`vite build`)
 3. electron main/preload build via the configured Vite Electron plugin
 
-## Optional Ollama usage
+## Optional DeepSeek parser
 
-The parser pipeline includes an optional AI enhancement path (`runParsingPipelineWithOptionalAi`) that can consume local Ollama suggestions for ambiguous structure/type hints.
+The parser pipeline now supports a preferred DeepSeek parsing path (`runParsingPipelinePreferDeepseek`) that asks DeepSeek to convert PRD text into structured JSON, then normalizes it for rendering.
 
-- Default endpoint: `http://localhost:11434`
-- Default model: `llama3.1:8b`
-- AI enhancement is optional and non-blocking; failures fall back to rule-based parsing.
-
-Current UI flow uses the deterministic parser pipeline by default. Ollama integration is available at the module/API layer and can be enabled when wiring an AI toggle in product UX.
+- Default endpoint: `https://api.deepseek.com`
+- Default model: `deepseek-chat`
+- Configure `VITE_DEEPSEEK_API_KEY` to enable API calls.
+- Set `VITE_ENABLE_DEEPSEEK_PARSER=false` to force rule-based parsing only.
+- DeepSeek parsing is non-blocking; failures fall back to the deterministic parser pipeline.
 
 ## Export capabilities
 
@@ -101,7 +101,7 @@ prd2prototype/
 ├── public/
 │   └── example-prd.md         # Bundled quick-start sample input
 ├── src/
-│   ├── ai/                    # Optional Ollama client + AI enhancement hooks
+│   ├── ai/                    # DeepSeek/Ollama clients + AI parsing/enhancement hooks
 │   ├── parser/                # Preprocess + parsing strategies + normalization pipeline
 │   ├── classifier/            # Rule-based type classifiers
 │   ├── layout/                # Layout/model generation engine
