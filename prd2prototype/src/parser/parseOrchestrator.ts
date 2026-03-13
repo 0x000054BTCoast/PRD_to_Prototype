@@ -11,9 +11,6 @@ export interface ParseOrchestratorOptions {
 }
 
 function isDeepseekEnabledByEnv(): boolean {
-}
-
-function isDeepseekEnabled(): boolean {
   return import.meta.env.VITE_ENABLE_DEEPSEEK_PARSER !== 'false';
 }
 
@@ -26,7 +23,6 @@ export async function parsePrdDocument(
     apiKey: options.deepseek?.apiKey,
     endpoint: options.deepseek?.endpoint,
     model: options.deepseek?.model,
-    enabled: isDeepseekEnabled(),
     timeoutMs: options.timeoutMs,
   });
 

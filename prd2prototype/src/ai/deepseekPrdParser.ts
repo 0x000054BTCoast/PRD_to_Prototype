@@ -2,7 +2,6 @@ import type { ParsedDocument } from '../types/parser';
 import type { ParseWarning } from '../types/warning';
 import { normalizeStructure } from '../parser/structureNormalizer';
 import { createDeepseekClient, defaultDeepseekClient, type DeepseekClient } from './deepseekClient';
-import { defaultDeepseekClient, type DeepseekClient } from './deepseekClient';
 
 export interface DeepseekParserOptions {
   enabled?: boolean;
@@ -131,12 +130,11 @@ export async function parsePrdWithDeepseek(
   const client = options.client
     ?? (options.apiKey || options.endpoint || options.model
       ? createDeepseekClient({
-        apiKey: options.apiKey,
-        endpoint: options.endpoint,
-        model: options.model,
-      })
+          apiKey: options.apiKey,
+          endpoint: options.endpoint,
+          model: options.model,
+        })
       : defaultDeepseekClient);
-  const client = options.client ?? defaultDeepseekClient;
   const available = await client.isAvailable();
 
   if (!available) {
