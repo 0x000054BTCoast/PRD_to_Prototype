@@ -69,6 +69,7 @@ import JsonViewer from '../components/parser/JsonViewer.vue';
 import StructureTree from '../components/parser/StructureTree.vue';
 import ParseIssuePanel from '../components/parser/ParseIssuePanel.vue';
 import { appStore as store } from '../stores/appStore';
+import { aiSettingsStore } from '../stores/aiSettingsStore';
 import { parsePrdDocument } from '../parser/parseOrchestrator';
 import type { ParsePipelineResult } from '../parser/pipeline';
 
@@ -86,6 +87,16 @@ const warnings = computed(() => parsedDocument.value?.warnings ?? []);
 const keywordMatches = computed(() => pipelineResult.value.preprocess?.keywordMatches ?? []);
 
 watch(
+  [() => store.sourceText, parseVersion, () => aiSettingsStore.deepseekEnabled, () => aiSettingsStore.deepseekApiKey],
+  async () => {
+    isParsing.value = true;
+    try {
+      pipelineResult.value = await parsePrdDocument(store.sourceText, {
+        deepseek: {
+          enabled: aiSettingsStore.deepseekEnabled,
+          apiKey: aiSettingsStore.deepseekApiKey,
+        },
+      });
   [() => store.sourceText, parseVersion],
   async () => {
     isParsing.value = true;

@@ -66,6 +66,21 @@ This runs:
 
 ## Optional DeepSeek parser
 
+
+### 新手快速配置（无需改 .env）
+
+1. 打开 **Home** 页面。
+2. 在 **DeepSeek Parser 设置（推荐）** 区域打开开关。
+3. 粘贴你的 `DeepSeek API Key`（`sk-...`）并保存。
+4. 重新点击 Parse/Regenerate 即可走 DeepSeek 解析。
+
+> API Key 会保存到当前浏览器的 LocalStorage，仅本机可见。
+
+The parser pipeline now supports a preferred DeepSeek parsing path (`runParsingPipelinePreferDeepseek`) that asks DeepSeek to convert PRD text into structured JSON, then normalizes it for rendering.
+
+- Default endpoint: `https://api.deepseek.com`
+- Default model: `deepseek-chat`
+- Configure API key from Home page settings (or `VITE_DEEPSEEK_API_KEY` as fallback).
 The parser pipeline now supports a preferred DeepSeek parsing path (`runParsingPipelinePreferDeepseek`) that asks DeepSeek to convert PRD text into structured JSON, then normalizes it for rendering.
 
 - Default endpoint: `https://api.deepseek.com`

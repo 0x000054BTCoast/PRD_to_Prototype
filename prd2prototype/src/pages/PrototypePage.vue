@@ -91,6 +91,7 @@ import PrototypeToolbar from '../components/prototype/PrototypeToolbar.vue';
 import PropertyPanel from '../components/prototype/PropertyPanel.vue';
 import ExportDialog from '../components/prototype/ExportDialog.vue';
 import { appStore as store } from '../stores/appStore';
+import { aiSettingsStore } from '../stores/aiSettingsStore';
 import { parsePrdDocument } from '../parser/parseOrchestrator';
 import type { ParsePipelineResult } from '../parser/pipeline';
 import { generateRenderPages } from '../layout/layoutEngine';
@@ -122,6 +123,16 @@ const pipelineResult = ref<ParsePipelineResult>({ preprocess: null, stages: null
 const isParsing = ref(false);
 
 watch(
+  [() => store.sourceText, parseVersion, () => aiSettingsStore.deepseekEnabled, () => aiSettingsStore.deepseekApiKey],
+  async () => {
+    isParsing.value = true;
+    try {
+      pipelineResult.value = await parsePrdDocument(store.sourceText, {
+        deepseek: {
+          enabled: aiSettingsStore.deepseekEnabled,
+          apiKey: aiSettingsStore.deepseekApiKey,
+        },
+      });
   [() => store.sourceText, parseVersion],
   async () => {
     isParsing.value = true;

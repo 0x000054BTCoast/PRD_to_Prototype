@@ -2,6 +2,15 @@ import { runParsingPipelinePreferDeepseek, type ParsePipelineResult } from './pi
 
 export interface ParseOrchestratorOptions {
   timeoutMs?: number;
+  deepseek?: {
+    enabled?: boolean;
+    apiKey?: string;
+    endpoint?: string;
+    model?: string;
+  };
+}
+
+function isDeepseekEnabledByEnv(): boolean {
 }
 
 function isDeepseekEnabled(): boolean {
@@ -13,6 +22,10 @@ export async function parsePrdDocument(
   options: ParseOrchestratorOptions = {},
 ): Promise<ParsePipelineResult> {
   const result = await runParsingPipelinePreferDeepseek(sourceText, {
+    enabled: options.deepseek?.enabled ?? isDeepseekEnabledByEnv(),
+    apiKey: options.deepseek?.apiKey,
+    endpoint: options.deepseek?.endpoint,
+    model: options.deepseek?.model,
     enabled: isDeepseekEnabled(),
     timeoutMs: options.timeoutMs,
   });
