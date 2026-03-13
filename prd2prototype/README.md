@@ -81,6 +81,11 @@ The parser pipeline now supports a preferred DeepSeek parsing path (`runParsingP
 - Default endpoint: `https://api.deepseek.com`
 - Default model: `deepseek-chat`
 - Configure API key from Home page settings (or `VITE_DEEPSEEK_API_KEY` as fallback).
+The parser pipeline now supports a preferred DeepSeek parsing path (`runParsingPipelinePreferDeepseek`) that asks DeepSeek to convert PRD text into structured JSON, then normalizes it for rendering.
+
+- Default endpoint: `https://api.deepseek.com`
+- Default model: `deepseek-chat`
+- Configure `VITE_DEEPSEEK_API_KEY` to enable API calls.
 - Set `VITE_ENABLE_DEEPSEEK_PARSER=false` to force rule-based parsing only.
 - DeepSeek parsing is non-blocking; failures fall back to the deterministic parser pipeline.
 

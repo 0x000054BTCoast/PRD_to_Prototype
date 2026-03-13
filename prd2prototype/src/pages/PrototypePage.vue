@@ -133,6 +133,11 @@ watch(
           apiKey: aiSettingsStore.deepseekApiKey,
         },
       });
+  [() => store.sourceText, parseVersion],
+  async () => {
+    isParsing.value = true;
+    try {
+      pipelineResult.value = await parsePrdDocument(store.sourceText);
     } finally {
       isParsing.value = false;
     }
